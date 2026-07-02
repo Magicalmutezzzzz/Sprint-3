@@ -1,14 +1,6 @@
-
-
-// ===============================
-// OpenWeather Configuration
-// ===============================
-const API_KEY = "ad436d26a1b49548b1dd56514fc46ec9"; // Replace with your own key
+const API_KEY = "ad436d26a1b49548b1dd56514fc46ec9"; 
 const BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
 
-// ===============================
-// DOM Elements
-// ===============================
 const cityInput = document.getElementById("cityInput");
 const searchBtn = document.getElementById("searchBtn");
 
@@ -18,92 +10,62 @@ const condition = document.getElementById("condition");
 const humidity = document.getElementById("humidity");
 const weatherIcon = document.getElementById("weatherIcon");
 
+const feelsLike = document.getElementById("feelsLike");
+const windSpeed = document.getElementById("windSpeed");
+const pressure = document.getElementById("pressure");
+const visibility = document.getElementById("visibility");
+const sunrise = document.getElementById("sunrise");
+const sunset = document.getElementById("sunset");
+
 const loading = document.getElementById("loading");
 const error = document.getElementById("error");
 
-// Optional Elements
-const feelsLike = document.getElementById("feelsLike");
-const windSpeed = document.getElementById("windSpeed");
-
-// ===============================
-// Fetch Weather by City
-// ===============================
-async function getWeather(city) {
-
+function showLoading() {
     loading.classList.remove("hidden");
-    error.textContent = "";
-
-    const cacheKey = city.toLowerCase();
-
-    // Check Cache
-    const cachedData = JSON.parse(localStorage.getItem(cacheKey));
-
-    if (cachedData && Date.now() - cachedData.timestamp < 600000) {
-        displayWeather(cachedData.data);
-        loading.classList.add("hidden");
-        return;
-    }
-
-    try {
-
-        const url =
-            `${BASE_URL}?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`;
-
-        const response = await fetch(url);
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message);
-        }
-
-        localStorage.setItem(cacheKey, JSON.stringify({
-            data,
-            timestamp: Date.now()
-        }));
-
-        displayWeather(data);
-
-        cityInput.value = "";
-
-    } catch {
-
-        error.textContent = "City not found. Please try again.";
-
-    } finally {
-
-        loading.classList.add("hidden");
-
-    }
-
 }
-async function getWeatherByLocation(lat, lon) {
 
-    loading.classList.remove("hidden");
-
-    try {
-
-        const url =
-            `${BASE_URL}?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`;
-
-        const response = await fetch(url);
-
-        const data = await response.json();
-
-        displayWeather(data);
-
-    } catch {
-
-        getWeather("London");
-
-    } finally {
-
-        loading.classList.add("hidden");
-
-    }
-
+function hideLoading() {
+    loading.classList.add("hidden");
 }
-function displayWeather(data) {
+
+function changeBackground(weather){
+
+    document.body.classList.remove(
+        "clear",
+        "clouds",
+        "rain",
+        "snow",
+        "thunderstorm"
+    );
+
+    switch(weather.toLowerCase()){
+
+        case "clear":
+            document.body.classList.add("clear");
+            break;
+
+        case "clouds":
+            document.body.classList.add("clouds");
+            break;
+
+        case "rain":
+        case "drizzle":
+            document.body.classList.add("rain");
+            break;
+
+        case "snow":
+            document.body.classList.add("snow");
+            break;
+
+        case "thunderstorm":
+            document.body.classList.add("thunderstorm");
+            break;
+
+        default:
+            document.body.classList.add("clear");
+    }
+}
+function displayWeather(data){
 
     cityName.textContent =
         `${data.name}, ${data.sys.country}`;
@@ -123,57 +85,178 @@ function displayWeather(data) {
     weatherIcon.alt =
         data.weather[0].description;
 
-    // Optional Details
-    if (feelsLike) {
+    changeBackground(data.weather[0].main);
+
+    if(feelsLike){
+
         feelsLike.textContent =
             `${Math.round(data.main.feels_like)}°C`;
+
     }
 
-    if (windSpeed) {
+    if(windSpeed){
+
         windSpeed.textContent =
             `${data.wind.speed} m/s`;
+
+    }
+
+    if(pressure){
+
+        pressure.textContent =
+            `${data.main.pressure} hPa`;
+
+    }
+
+    if(visibility){
+
+        visibility.textContent =
+            `${(data.visibility/1000).toFixed(1)} km`;
+
+    }
+
+    if(sunrise){
+
+        sunrise.textContent =
+            new Date(data.sys.sunrise*1000)
+            .toLocaleTimeString([],{
+                hour:"2-digit",
+                minute:"2-digit"
+            });
+
+    }
+
+    if(sunset){
+
+        sunset.textContent =
+            new Date(data.sys.sunset*1000)
+            .toLocaleTimeString([],{
+                hour:"2-digit",
+                minute:"2-digit"
+            });
+
     }
 
 }
-searchBtn.addEventListener("click", () => {
+async function getWeather(city){
 
-    const city = cityInput.value.trim();
+    showLoading();
+    error.textContent = "";
 
-    if (!city) {
-        error.textContent = "Please enter a city.";
+    const cacheKey = city.toLowerCase();
+
+    const cachedData = JSON.parse(localStorage.getItem(cacheKey));
+
+    if(cachedData && (Date.now() - cachedData.timestamp < 600000)){
+
+        displayWeather(cachedData.data);
+
+        hideLoading();
+
         return;
-    }
-
-    getWeather(city);
-
-});
-
-cityInput.addEventListener("keydown", (e) => {
-
-    if (e.key === "Enter") {
-
-        searchBtn.click();
 
     }
 
-});
+    try{
 
-window.onload = () => {
+        const url =
+        `${BASE_URL}?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`;
 
-    if (navigator.geolocation) {
+        const response = await fetch(url);
+
+        const data = await response.json();
+
+        if(!response.ok){
+
+            throw new Error(data.message);
+
+        }
+
+        localStorage.setItem(cacheKey,JSON.stringify({
+
+            data:data,
+
+            timestamp:Date.now()
+
+        }));
+
+        displayWeather(data);
+
+        cityInput.value = "";
+
+    }
+
+    catch(err){
+
+        error.textContent =
+        "City not found. Please try again.";
+
+    }
+
+    finally{
+
+        hideLoading();
+
+    }
+
+}
+async function getWeatherByLocation(lat,lon){
+
+    showLoading();
+
+    error.textContent="";
+
+    try{
+
+        const url =
+        `${BASE_URL}?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`;
+
+        const response = await fetch(url);
+
+        const data = await response.json();
+
+        if(!response.ok){
+
+            throw new Error("Unable to fetch weather.");
+
+        }
+
+        displayWeather(data);
+
+    }
+
+    catch(err){
+
+        getWeather("London");
+
+    }
+
+    finally{
+
+        hideLoading();
+
+    }
+
+}
+function getCurrentLocation(){
+
+    if(navigator.geolocation){
 
         navigator.geolocation.getCurrentPosition(
 
-            (position) => {
+            (position)=>{
 
                 getWeatherByLocation(
+
                     position.coords.latitude,
+
                     position.coords.longitude
+
                 );
 
             },
 
-            () => {
+            ()=>{
 
                 getWeather("London");
 
@@ -181,10 +264,74 @@ window.onload = () => {
 
         );
 
-    } else {
+    }
+
+    else{
 
         getWeather("London");
 
     }
 
-};
+}
+searchBtn.addEventListener("click", () => {
+
+    const city = cityInput.value.trim();
+
+    if (city === "") {
+        error.textContent = "Please enter a city.";
+        return;
+    }
+
+    getWeather(city);
+
+});
+cityInput.addEventListener("keydown", (event) => {
+
+    if (event.key === "Enter") {
+
+        const city = cityInput.value.trim();
+
+        if (city !== "") {
+
+            getWeather(city);
+
+        }
+
+    }
+
+});
+function refreshCachedWeather() {
+
+    const keys = Object.keys(localStorage);
+
+    keys.forEach(key => {
+
+        try {
+
+            const cache = JSON.parse(localStorage.getItem(key));
+
+            if (!cache || !cache.timestamp) return;
+
+            if (Date.now() - cache.timestamp > 600000) {
+
+                localStorage.removeItem(key);
+
+            }
+
+        } catch {
+
+            localStorage.removeItem(key);
+
+        }
+
+    });
+
+}
+window.addEventListener("load", () => {
+
+    refreshCachedWeather();
+
+    getCurrentLocation();
+
+});
+console.log("Weather Dashboard Loaded Successfully");
